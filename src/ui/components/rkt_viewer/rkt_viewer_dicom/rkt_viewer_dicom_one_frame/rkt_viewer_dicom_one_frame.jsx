@@ -29,8 +29,10 @@ import RktAnimationLoading from './../../../rkt_animation/rkt_animation_loading/
 //actions
 import { loadDicom, getImageMetadata } from './rkt_viewer_dicom_one_frame_actions.js';
 //Using global variables
-const cornerstone = window.cornerstone;
-const cornerstoneTools = window.cornerstoneTools;
+import cornerstone from 'cornerstone-core';
+import cornerstoneMath from 'cornerstone-math';
+import cornerstoneTools from 'cornerstone-tools';
+import Hammer from 'hammerjs';
 
 export default class RktViewerDicomOneFrame extends Component {
 
@@ -45,6 +47,35 @@ export default class RktViewerDicomOneFrame extends Component {
 
         this.componentDidMount = this.componentDidMount.bind(this);
         this.displayImage = this.displayImage.bind(this);
+
+        cornerstoneTools.external.cornerstone = cornerstone;
+        cornerstoneTools.external.Hammer = Hammer;
+        cornerstoneTools.external.cornerstoneMath = cornerstoneMath;
+
+        cornerstoneTools.init({
+            /**
+             * When cornerstone elements are enabled,
+             * should `mouse` input events be listened for?
+             */
+            mouseEnabled: true,
+            /**
+             * When cornerstone elements are enabled,
+             * should `touch` input events be listened for?
+             */
+            touchEnabled: true,
+            /**
+             * A special flag that synchronizes newly enabled cornerstone elements. When
+             * enabled, their active tools are set to reflect tools that have been
+             * activated with `setToolActive`.
+             */
+            globalToolSyncEnabled: false,
+            /**
+             * Most tools have an associated canvas or SVG cursor. Enabling this flag
+             * causes the cursor to be shown when the tool is active, bound to left
+             * click, and the user is hovering the enabledElement.
+             */
+            showSVGCursors: false,
+        });
     }
 
     componentDidMount() {
@@ -98,11 +129,13 @@ export default class RktViewerDicomOneFrame extends Component {
             });
 
             if (this.props.add_controls) {
+                /*
                 cornerstoneTools.mouseInput.enable(element);
                 cornerstoneTools.mouseWheelInput.enable(element);
                 cornerstoneTools.wwwc.activate(element, 1); // ww/wc is the default tool for left mouse button
                 cornerstoneTools.zoom.activate(element, 4); // zoom is the default tool for right mouse button
                 cornerstoneTools.zoomWheel.activate(element); // zoom is the default tool for middle mouse wheel
+                */
             }
         }
     }
@@ -119,11 +152,13 @@ export default class RktViewerDicomOneFrame extends Component {
     deactivateControls() {
 
         var element = this.imageDiv;
+        /*
         cornerstoneTools.pan.deactivate(element, 2);
         cornerstoneTools.wwwc.deactivate(element, 1);
         cornerstoneTools.length.deactivate(element, 1);
         cornerstoneTools.rectangleRoi.deactivate(element, 1);
         cornerstoneTools.highlight.deactivate(element, 1);
+        */
         this.removeAnnotations();
 
     }
@@ -132,7 +167,7 @@ export default class RktViewerDicomOneFrame extends Component {
 
         var element = this.imageDiv;
 
-        this.deactivateControls();
+        //this.deactivateControls();
 
         if (viewermode === "window_level") {
 
@@ -161,18 +196,32 @@ export default class RktViewerDicomOneFrame extends Component {
 
         } else if (viewermode === "annotation_rectangle") {
 
-            cornerstoneTools.rectangleRoi.activate(element, 1);
+            //cornerstoneTools.rectangleRoi.activate(element, 1);
+            const FreehandRoiTool = cornerstoneTools.FreehandRoiTool;
+
+            cornerstoneTools.addTool(FreehandRoiTool)
+            cornerstoneTools.setToolActiveForElement(element, 'FreehandRoi', { mouseButtonMask: 1 })
 
             this.setState({
                 viewer_mode: "annotation_rectangle"
             });
         } else if (viewermode === "magnifying_glass") {
+            var data = cornerstoneTools.getToolState(element, "FreehandRoi").data;
 
-            cornerstoneTools.highlight.activate(element, 1);
+            var precoordinates = data.map((obj) => {
+                return obj.handles.points
+            })
 
-            this.setState({
-                viewer_mode: "magnifying_glass"
-            });
+            var coordinates = precoordinates.map((obj) => {
+                return obj.map((coord) => {
+                    return {
+                        x: coord.x,
+                        y: coord.y
+                    }
+                })
+            })
+
+            console.log(coordinates)
         }
     }
 
@@ -209,40 +258,40 @@ export default class RktViewerDicomOneFrame extends Component {
             var buttonMagnifyingGlass;
 
             styleIconLength =
-                {
-                    fontSize: "13pt",
-                    marginTop: "6px"
-                }
+            {
+                fontSize: "13pt",
+                marginTop: "6px"
+            }
             iconLength = <i className="fi-pencil" style={styleIconLength}></i>;
 
             styleWindowLevel =
-                {
-                    fontSize: "12pt",
-                    marginTop: "6px"
-                }
+            {
+                fontSize: "12pt",
+                marginTop: "6px"
+            }
             iconWindowLevel = <i className="fi-paint-bucket" style={styleWindowLevel}></i>;
 
             stylePan =
-                {
-                    fontSize: "10pt",
-                    marginTop: "9px"
-                }
+            {
+                fontSize: "10pt",
+                marginTop: "9px"
+            }
 
             iconPan = <i className="fi-arrows-out" style={stylePan}></i>;
 
             styleAnnotationRectangle =
-                {
-                    fontSize: "12pt",
-                    marginTop: "7px"
-                }
+            {
+                fontSize: "12pt",
+                marginTop: "7px"
+            }
 
             iconAnnotationRectangle = <i className="fi-annotate" style={styleAnnotationRectangle}></i>;
 
             styleMagnifyingGlass =
-                {
-                    fontSize: "12pt",
-                    marginTop: "6px"
-                }
+            {
+                fontSize: "12pt",
+                marginTop: "6px"
+            }
 
             iconMagnifyingGlass = <i className="fi-magnifying-glass" style={styleMagnifyingGlass}></i>
 
